@@ -1,0 +1,3 @@
+[submodule "./lib/jinja2"]
+	path = ./lib/jinja2
+	url = git://github.com/clones/jinja2.git
