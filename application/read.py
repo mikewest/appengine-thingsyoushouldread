@@ -42,11 +42,41 @@ class Index( EasyRenderingRequestHandler ):
 
 class RSS( EasyRenderingRequestHandler ):
     def get( self ):
-        feed    =   InstapaperFeed(
-                        url='http://www.instapaper.com/folder/7134/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw',
-                        category=u'Writing'
-                    )
-        feed.update( Bookmark )
+        feedlist    =   [
+                            (
+                                u'Writing',
+                                u'http://www.instapaper.com/folder/7134/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
+                            ),
+                            (
+                                u'Programming',
+                                u'http://www.instapaper.com/folder/1383/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw',
+                            ),
+                            (
+                                u'Tech',
+                                u'http://www.instapaper.com/folder/1384/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
+                            ),
+                            (
+                                u'Politics',
+                                u'http://www.instapaper.com/folder/1386/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
+                            ),
+                            (
+                                u'Etc.',
+                                u'http://www.instapaper.com/folder/6485/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
+                            ),
+                            (
+                                u'Design',
+                                u'http://www.instapaper.com/folder/6491/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
+                            ),
+                            (
+                                u'To Be Read',
+                                u'http://www.instapaper.com/rss/203164/y9GD9Jqfv9rxl5tQrFptls3Pc'
+                            )
+                        ]
+        feeds       =   [ InstapaperFeed( url=url, category=category ) for category, url in feedlist ]
+        
+        for feed in feeds:
+            feed.update( Bookmark )
+
         self.redirect('/')
 
 class NotFound( EasyRenderingRequestHandler ):

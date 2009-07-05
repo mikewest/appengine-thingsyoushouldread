@@ -44,14 +44,18 @@ class AtomFeed( object ):
     def update( self, entity_model ):
         self._pull_feed()
         for link in self.links:
-            entity_model.get_or_insert(
+            entity = entity_model.get_or_insert(
                 key_name=link['key_name'],
                 title=link['title'],
                 url=db.Link(link['url']),
+                normalized_url=False,
                 description=link['description'],
                 published=link['published'],
                 category=self.category
             )
+            if entity.category != self.category:
+                entity.category = self.category
+                entity.put()
 
 """InstapaperFeed subclasses AtomFeed for most of it's functionality"""
 class InstapaperFeed( AtomFeed ):
