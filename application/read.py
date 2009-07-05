@@ -70,6 +70,10 @@ class RSS( EasyRenderingRequestHandler ):
                             (
                                 u'To Be Read',
                                 u'http://www.instapaper.com/rss/203164/y9GD9Jqfv9rxl5tQrFptls3Pc'
+                            ),
+                            (
+                                u'Starred',
+                                u'http://www.instapaper.com/starred/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
                             )
                         ]
         feeds       =   [ InstapaperFeed( url=url, category=category ) for category, url in feedlist ]

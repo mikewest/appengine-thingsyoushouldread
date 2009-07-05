@@ -49,13 +49,12 @@ class AtomFeed( object ):
                 title=link['title'],
                 url=db.Link(link['url']),
                 normalized_url=False,
+                starred=False,
                 description=link['description'],
                 published=link['published'],
                 category=self.category
             )
-            if entity.category != self.category:
-                entity.category = self.category
-                entity.put()
+            self._postprocess_entity( entity, link )
 
 """InstapaperFeed subclasses AtomFeed for most of it's functionality"""
 class InstapaperFeed( AtomFeed ):
@@ -66,4 +65,13 @@ class InstapaperFeed( AtomFeed ):
                                         link['published']
                                     )
 
+    def _postprocess_entity( self, entity, link ):
+        if self.category == u'Starred':
+            if not entity.starred:
+                entity.starred = True
+                entity.put()
+        else:
+            if entity.category != self.category:
+                entity.category = self.category
+                entity.put()
 
