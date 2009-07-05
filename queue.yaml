@@ -1,5 +1,6 @@
 queue:
--   name:   feeds   # Queue of feed URLs for processing
+-   name:   feeds
     rate:   1/s
--   name:   items   # As URLs are processed, they generate lists of items to
-    rate:   10/s    # be validated against the DataStore, normalized, and persisted
+-   name:   items
+    rate:   8/s
+

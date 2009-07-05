@@ -15,6 +15,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.api.labs.taskqueue import Task
 import pickle
+import logging
 
 # Import models and templating
 from models.Bookmark import Bookmark
@@ -77,7 +78,7 @@ class FeedWorker( WorkerBase ):
 class ItemWorker( WorkerBase ):
     def _process( self ):
         """Process an item, fed in as a few POST params"""
-        self.item = pickle.loads( self.request.get( 'link' ) )
+        self.item = pickle.loads( str( self.request.get( 'link' ) ) )
         if self.item['key_name']:
             db.run_in_transaction( self._item_txn )
             return True
@@ -167,14 +168,14 @@ class NotFound( EasyRenderingRequestHandler ):
 
 def main():
     ROUTES = [
-        ( '/',              Index ),
+        ( '/',                      Index ),
         ( '/folder/([a-zA-Z\.]*)/', ListView ),
         
         ( '/task/update/',          UpdateInstapaper ),
         ( '/task/feed/',            FeedWorker ),
         ( '/task/item/',            ItemWorker ),
 
-        ( '/*',             NotFound )
+        ( '/*',                     NotFound )
     ]
     application = webapp.WSGIApplication( ROUTES, debug=DEBUG )
     run_wsgi_app(application)
