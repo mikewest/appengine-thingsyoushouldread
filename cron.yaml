@@ -1,0 +1,4 @@
+cron:
+-   description:    Pull in Instapaper feeds.
+    url:            /rss
+    schedule:       every 60 minutes

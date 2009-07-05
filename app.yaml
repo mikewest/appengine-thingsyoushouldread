@@ -4,5 +4,9 @@ runtime: python
 api_version: 1
 
 handlers:
-- url: /.*
-  script: application/read.py
+-   url:    /rss
+    script: application/read.py
+    login:  admin
+-   url:    /.*
+    script: application/read.py
+

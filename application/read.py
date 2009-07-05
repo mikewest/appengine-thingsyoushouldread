@@ -40,6 +40,13 @@ class Index( EasyRenderingRequestHandler ):
     def get( self ):
         self.renderHtml( 'index.html', {} )
 
+class ListView( EasyRenderingRequestHandler ):
+    def get( self, folder ):
+        links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC', folder );
+        self.renderHtml( 'listview.html', { 'links': links, 'folder': folder.lower() } )
+
+
+
 class RSS( EasyRenderingRequestHandler ):
     def get( self ):
         feedlist    =   [
@@ -89,9 +96,10 @@ class NotFound( EasyRenderingRequestHandler ):
 
 def main():
     ROUTES = [
-        ( '/',  Index ),
-        ( '/rss', RSS ),
-        ( '/*', NotFound )
+        ( '/',              Index ),
+        ( '/folder/([a-zA-Z\.]*)/', ListView ),
+        ( '/rss',           RSS ),
+        ( '/*',             NotFound )
     ]
     application = webapp.WSGIApplication( ROUTES, debug=DEBUG )
     run_wsgi_app(application)

@@ -1,0 +1,16 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Things I Think You Should Read</title>
+</head>
+<body>
+  <h1><a href='/'>Things I Think You Should Read</a></h1>
+  <p>I've enjoyed reading these {{ folder }} articles: you might too.</p>
+  <ul>
+{% for link in links %}
+    <li>{% if link.starred %}&#x2605; &rarr;{% endif %}<a href="{{ link.url }}">{{ link.title }}</a></li>
+{% endfor %}
+  <ul>
+</body>
+</html>
