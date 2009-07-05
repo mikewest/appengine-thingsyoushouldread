@@ -13,7 +13,8 @@ sys.path.insert( 0, os.path.join( APP_BASE, 'lib', 'sources' ) )
 from google.appengine.ext import webapp, db
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
-from google.appengine.api.labs import taskqueue
+from google.appengine.api.labs.taskqueue import Task
+import pickle
 
 # Import models and templating
 from models.Bookmark import Bookmark
@@ -34,7 +35,6 @@ class EasyRenderingRequestHandler( webapp.RequestHandler ):
 
     def render( self, template_filename, context ):
         path = '%s/%s' % ( TEMPLATES_BASE, template_filename )
-
         self.response.out.write( template.render( path,  context ) ) 
 
 class Index( EasyRenderingRequestHandler ):
@@ -51,7 +51,7 @@ class ListView( EasyRenderingRequestHandler ):
 # Workers
 #
 class WorkerBase( webapp.RequestHandler ):
-    def get( self ):
+    def post( self ):
         if self._process():
             self.response.out.write('SUCCESS');
         else:
@@ -69,39 +69,42 @@ class FeedWorker( WorkerBase ):
         if feed:
             feed.update()
             for link in feed.links:
-                taskqueue.add( url='/task/item/', params=link )
-            return true
+                Task( url='/task/item/', params={ 'link': pickle.dumps(link) } ).add( queue_name='items' )
+            return True
         else:
-            return false
+            return False
 
 class ItemWorker( WorkerBase ):
     def _process( self ):
         """Process an item, fed in as a few POST params"""
-        self.key_name = self.response.get('key_name')
-        if self.key_name:
+        self.item = pickle.loads( self.request.get( 'link' ) )
+        if self.item['key_name']:
             db.run_in_transaction( self._item_txn )
+            return True
+        else:
+            return False
 
     def _item_txn( self ):
-        link = Bookmark.get_by_key_name( self.key_name )
+        link = Bookmark.get_by_key_name( self.item['key_name'] )
         if link is None:
             link    =   Bookmark(
-                            key_name=self.key_name,
-                            title=self.response.get('title'),
-                            url=db.Link(self.response.get('url')),
-                            description=self.response.get('description'),
-                            published=self.response.get('published'),
-                            category=self.response.get('category'),
+                            key_name=self.item['key_name'],
+                            title=self.item['title'],
+                            url=db.Link(self.item['url']),
+                            description=self.item['description'],
+                            published=self.item['published'],
+                            category=self.item['category'],
                             normalized_url=False,
-                            starred=self.response.get('starred')
+                            starred=self.item['starred']=='True'
                         )
             link.put()
         else:
-            if self.response.get('category') == u'Starred':
+            if self.item['category'] == u'Starred':
                 if not link.starred:
                     link.starred = True
                     link.put()
-            elif self.response.get('category') != link.category:
-                link.category = self.response.get('category')
+            elif self.item['category'] != link.category:
+                link.category = self.item['category']
                 link.put()
 #
 # Cron
@@ -141,9 +144,20 @@ class UpdateInstapaper( webapp.RequestHandler ):
                                 u'Starred',
                                 u'http://www.instapaper.com/starred/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
                             )
+                         
                         ]
-        for category, url in feedlist:
-            taskqueue.add( url='/task/feed/', params={ 'url': url, 'category': category } )
+        tasks   =   [
+                        Task(
+                            url='/task/feed/',
+                            params={
+                                        'url': url,
+                                        'category': category
+                                    }
+                        )
+                        for category, url in feedlist
+                    ]
+        for task in tasks:
+            task.add( queue_name="feeds" )
         self.response.clear()
         self.response.set_status( 202 ) # 202 = Accepted
 
@@ -160,7 +174,6 @@ def main():
         ( '/task/feed/',            FeedWorker ),
         ( '/task/item/',            ItemWorker ),
 
-        ( '/rss',           RSS ),
         ( '/*',             NotFound )
     ]
     application = webapp.WSGIApplication( ROUTES, debug=DEBUG )

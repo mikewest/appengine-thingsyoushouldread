@@ -1,4 +1,4 @@
 cron:
 -   description:    Pull in Instapaper feeds.
-    url:            /rss
+    url:            /task/update/
     schedule:       every 60 minutes

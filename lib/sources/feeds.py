@@ -30,7 +30,6 @@ class AtomFeed( object ):
                                 'published':        element.find('pubDate').text,
                                 'category':         self.category,
                                 'starred':          self.category == u'Starred',
-                                'normalized_url':   False
                             }
                 self.links.append( link )
 
@@ -43,7 +42,7 @@ class AtomFeed( object ):
                     )
                 )
 
-    def update( self, entity_model ):
+    def update( self ):
         self._pull_feed()
         self._postprocess_feed()
 
@@ -55,14 +54,3 @@ class InstapaperFeed( AtomFeed ):
             link['published']   =   self._normalize_rfc822_date(
                                         link['published']
                                     )
-
-    def _postprocess_entity( self, entity, link ):
-        if self.category == u'Starred':
-            if not entity.starred:
-                entity.starred = True
-                entity.put()
-        else:
-            if entity.category != self.category:
-                entity.category = self.category
-                entity.put()
-
