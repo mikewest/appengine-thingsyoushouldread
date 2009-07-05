@@ -13,6 +13,7 @@ sys.path.insert( 0, os.path.join( APP_BASE, 'lib', 'sources' ) )
 from google.appengine.ext import webapp, db
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.api.labs import taskqueue
 
 # Import models and templating
 from models.Bookmark import Bookmark
@@ -46,8 +47,66 @@ class ListView( EasyRenderingRequestHandler ):
         self.renderHtml( 'listview.html', { 'links': links, 'folder': folder.lower() } )
 
 
+#
+# Workers
+#
+class WorkerBase( webapp.RequestHandler ):
+    def get( self ):
+        if self._process():
+            self.response.out.write('SUCCESS');
+        else:
+            self.error( 500 )
 
-class RSS( EasyRenderingRequestHandler ):
+class FeedWorker( WorkerBase ):
+    def _process( self ):
+        """Process a feed; requires `url` and `category`"""
+        self.url        = self.request.get('url')
+        self.category   = self.request.get('category')
+        feed            = False
+        if self.url.startswith( 'http://www.instapaper.com' ):
+            feed = InstapaperFeed( url=self.url, category=self.category )
+        
+        if feed:
+            feed.update()
+            for link in feed.links:
+                taskqueue.add( url='/task/item/', params=link )
+            return true
+        else:
+            return false
+
+class ItemWorker( WorkerBase ):
+    def _process( self ):
+        """Process an item, fed in as a few POST params"""
+        self.key_name = self.response.get('key_name')
+        if self.key_name:
+            db.run_in_transaction( self._item_txn )
+
+    def _item_txn( self ):
+        link = Bookmark.get_by_key_name( self.key_name )
+        if link is None:
+            link    =   Bookmark(
+                            key_name=self.key_name,
+                            title=self.response.get('title'),
+                            url=db.Link(self.response.get('url')),
+                            description=self.response.get('description'),
+                            published=self.response.get('published'),
+                            category=self.response.get('category'),
+                            normalized_url=False,
+                            starred=self.response.get('starred')
+                        )
+            link.put()
+        else:
+            if self.response.get('category') == u'Starred':
+                if not link.starred:
+                    link.starred = True
+                    link.put()
+            elif self.response.get('category') != link.category:
+                link.category = self.response.get('category')
+                link.put()
+#
+# Cron
+#
+class UpdateInstapaper( webapp.RequestHandler ):
     def get( self ):
         feedlist    =   [
                             (
@@ -83,12 +142,10 @@ class RSS( EasyRenderingRequestHandler ):
                                 u'http://www.instapaper.com/starred/rss/203164/fvc7FjLu4aIN5wsniOahrlWgbLw'
                             )
                         ]
-        feeds       =   [ InstapaperFeed( url=url, category=category ) for category, url in feedlist ]
-        
-        for feed in feeds:
-            feed.update( Bookmark )
-
-        self.redirect('/')
+        for category, url in feedlist:
+            taskqueue.add( url='/task/feed/', params={ 'url': url, 'category': category } )
+        self.response.clear()
+        self.response.set_status( 202 ) # 202 = Accepted
 
 class NotFound( EasyRenderingRequestHandler ):
     def get( self ):
@@ -98,6 +155,11 @@ def main():
     ROUTES = [
         ( '/',              Index ),
         ( '/folder/([a-zA-Z\.]*)/', ListView ),
+        
+        ( '/task/update/',          UpdateInstapaper ),
+        ( '/task/feed/',            FeedWorker ),
+        ( '/task/item/',            ItemWorker ),
+
         ( '/rss',           RSS ),
         ( '/*',             NotFound )
     ]

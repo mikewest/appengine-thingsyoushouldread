@@ -23,14 +23,16 @@ class AtomFeed( object ):
             xml     = fromstring( response.content )
             for element in xml.findall( 'channel/item' ):
                 link    =   {
-                                'guid':         element.find('guid').text,
-                                'title':        element.find('title').text,
-                                'url':          element.find('link').text,
-                                'description':  element.find('description').text,
-                                'published':    element.find('pubDate').text
+                                'guid':             element.find('guid').text,
+                                'title':            element.find('title').text,
+                                'url':              element.find('link').text,
+                                'description':      element.find('description').text,
+                                'published':        element.find('pubDate').text,
+                                'category':         self.category,
+                                'starred':          self.category == u'Starred',
+                                'normalized_url':   False
                             }
                 self.links.append( link )
-        self._postprocess_feed()
 
     def _normalize_rfc822_date( self, date_string ):
         return  datetime.fromtimestamp(
@@ -43,18 +45,7 @@ class AtomFeed( object ):
 
     def update( self, entity_model ):
         self._pull_feed()
-        for link in self.links:
-            entity = entity_model.get_or_insert(
-                key_name=link['key_name'],
-                title=link['title'],
-                url=db.Link(link['url']),
-                normalized_url=False,
-                starred=False,
-                description=link['description'],
-                published=link['published'],
-                category=self.category
-            )
-            self._postprocess_entity( entity, link )
+        self._postprocess_feed()
 
 """InstapaperFeed subclasses AtomFeed for most of it's functionality"""
 class InstapaperFeed( AtomFeed ):
