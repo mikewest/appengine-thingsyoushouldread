@@ -1,5 +1,5 @@
 application: thingsyoushouldread
-version: 0-1
+version: 1-alpha
 runtime: python
 api_version: 1
 
