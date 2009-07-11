@@ -34,6 +34,10 @@ class EasyRenderingRequestHandler( webapp.RequestHandler ):
     def renderFeed( self, template_filename, context ):
         self.render( 'application/atom+xml', template_filename, context )
 
+    def render404( self ):
+        self.response.set_status( 404 )
+        self.render( 'text/html', '404.html', {} )
+
     def render( self, content_type, template_filename, context ):
         path = '%s/%s' % ( TEMPLATES_BASE, template_filename )
         if content_type:
@@ -52,18 +56,24 @@ class ListView( EasyRenderingRequestHandler ):
             links = db.GqlQuery( 'SELECT * FROM Bookmark ORDER BY published DESC LIMIT 25' )
         else:
             links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC', folder )
-        self.renderHtml( 'listview.html', { 'links': links, 'folder': folder } )
+        if links.count():
+            self.renderHtml( 'listview.html', { 'links': links, 'folder': folder } )
+        else:
+            self.render404()
 
 class FeedView( EasyRenderingRequestHandler ):
     def get( self, folder ):
-        if folder is 'Starred':
+        if folder == 'Starred':
             links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE starred = True ORDER BY published DESC LIMIT 25' )
-        elif folder is 'Recent':
-            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category != "To Be Read" ORDER BY published DESC LIMIT 25' )
+        elif folder == 'Recent':
+            links = db.GqlQuery( 'SELECT * FROM Bookmark ORDER BY published DESC LIMIT 25' )
         else:
            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC LIMIT 25', folder )
-        updated = links[ 0 ].published
-        self.renderFeed( 'feedview.html', { 'links': links, 'last_updated': updated, 'folder': folder } )
+        if links.count():
+            updated = links[ 0 ].published
+            self.renderFeed( 'feedview.html', { 'links': links, 'last_updated': updated, 'folder': folder } )
+        else:
+            self.render404()
         
 #
 # Workers

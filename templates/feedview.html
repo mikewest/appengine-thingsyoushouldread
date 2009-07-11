@@ -10,7 +10,7 @@
     <id>http://thingsyoushouldread.mikewest.org/folder/{{ folder }}/feed/</id>
 {% for link in links %}
     <entry>
-        <title type="html">{{ link.title }} (&#9733;)</title>
+    <title type="html">{{ link.title }} {% if link.starred %}(&#9733;){% endif %}</title>
         <link href="{{ link.url }}"/>
         <id>{{ link.url }}</id>
         <updated>{{ link.published|date:"Y-m-d\TH:i:s\Z" }}</updated>
