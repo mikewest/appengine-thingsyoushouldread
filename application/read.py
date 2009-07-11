@@ -23,19 +23,21 @@ from sources.feeds import InstapaperFeed
 
 class EasyRenderingRequestHandler( webapp.RequestHandler ):
     def renderText( self, template_filename, context ):
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.render( template_filename, context )
+        self.render( 'text/plain/', template_filename, context )
 
     def renderXML( self, template_filename, context ):
-        self.response.headers['Content-Type'] = 'text/xml'
-        self.render( template_filename, context )
+        self.render( 'text/xml', template_filename, context )
 
     def renderHtml( self, template_filename, context ):
-        self.response.headers['Content-Type'] = 'text/html'
-        self.render( template_filename, context )
+        self.render( 'text/html', template_filename, context )
 
-    def render( self, template_filename, context ):
+    def renderFeed( self, template_filename, context ):
+        self.render( 'application/atom+xml', template_filename, context )
+
+    def render( self, content_type, template_filename, context ):
         path = '%s/%s' % ( TEMPLATES_BASE, template_filename )
+        if content_type:
+            self.response.headers['Content-Type'] = content_type
         self.response.out.write( template.render( path,  context ) ) 
 
 class Index( EasyRenderingRequestHandler ):
@@ -44,10 +46,25 @@ class Index( EasyRenderingRequestHandler ):
 
 class ListView( EasyRenderingRequestHandler ):
     def get( self, folder ):
-        links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC', folder );
-        self.renderHtml( 'listview.html', { 'links': links, 'folder': folder.lower() } )
+        if folder == 'Starred':
+            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE starred = True ORDER BY published DESC' )
+        elif folder == 'Recent':
+            links = db.GqlQuery( 'SELECT * FROM Bookmark ORDER BY published DESC LIMIT 25' )
+        else:
+            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC', folder )
+        self.renderHtml( 'listview.html', { 'links': links, 'folder': folder } )
 
-
+class FeedView( EasyRenderingRequestHandler ):
+    def get( self, folder ):
+        if folder is 'Starred':
+            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE starred = True ORDER BY published DESC LIMIT 25' )
+        elif folder is 'Recent':
+            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category != "To Be Read" ORDER BY published DESC LIMIT 25' )
+        else:
+           links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC LIMIT 25', folder )
+        updated = links[ 0 ].published
+        self.renderFeed( 'feedview.html', { 'links': links, 'last_updated': updated, 'folder': folder } )
+        
 #
 # Workers
 #
@@ -96,7 +113,7 @@ class ItemWorker( WorkerBase ):
                             published=self.item['published'],
                             category=self.item['category'],
                             normalized_url=False,
-                            starred=self.item['starred']=='True'
+                            starred=self.item['starred']
                         )
             link.put()
         else:
@@ -168,9 +185,10 @@ class NotFound( EasyRenderingRequestHandler ):
 
 def main():
     ROUTES = [
-        ( '/',                      Index ),
-        ( '/folder/([a-zA-Z\.]*)/', ListView ),
-        
+        ( '/',                          Index ),
+        ( '/folder/([a-zA-Z\.]*)/',     ListView ),
+        ( '/folder/([a-zA-Z\.]*)/feed/', FeedView ),
+
         ( '/task/update/',          UpdateInstapaper ),
         ( '/task/feed/',            FeedWorker ),
         ( '/task/item/',            ItemWorker ),

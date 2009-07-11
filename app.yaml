@@ -1,5 +1,5 @@
 application: thingsyoushouldread
-version: 1-taskqueue
+version: 1-layout-rss
 runtime: python
 api_version: 1
 

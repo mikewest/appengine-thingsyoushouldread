@@ -1,16 +1,53 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Things I Think You Should Read</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Things You Should Read: {{ Folder }}</title>
+    <link rel="stylesheet" href="http://static.mikewest.org/common.css" type="text/css" media="screen">
+    <style type="text/css">
+        /* Override the mikewest.org stylesheets a tiny little bit */
+        .archive ol li a:first-child    {   margin-bottom:  1em;    position: relative;             }
+        .footer                         {   clear:          both;                                   }
+        .meta                           {   width:          116px;                                  }
+        .starred                        {   position:       absolute;   left:  -35px; top: 0px;     }
+        a:hover .starred                {   font-style:     italic;                                 }
+    </style>
+    <link rel="alternate" type="application/atom+xml" href="/folder/{{ folder }}/feed/" title="Atom feed for the {{ folder|lower }} folder">
+    <meta name="viewport" content="width=770">
 </head>
 <body>
-  <h1><a href='/'>Things I Think You Should Read</a></h1>
-  <p>I've enjoyed reading these {{ folder }} articles: you might too.</p>
-  <ul>
+    <div class="header">
+        <ul>
+            <li><h1><a href='/' rel="home">Things You Should Read</a></h1></li>
+            <li><a href='/folder/{{ folder }}/feed/'>RSS Feed</a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <div class="archive">
+            <h2>Things You Should Read: &lsquo;{{ folder }}&rsquo;</h2>
+            <ol>
 {% for link in links %}
-    <li>{% if link.starred %}&#x2605; &rarr;{% endif %}<a href="{{ link.url }}">{{ link.title }}</a></li>
+  <li class="internal">
+    <a href="{{ link.url }}">
+        {{ link.title }}
+        {% if link.starred %}
+        <span class="starred">&#9733;</span>
+        {% endif %}
+    </a>
+    <div class="meta">I read this around <span class="published">{{ link.published|date:"H:i \o\n F j, Y"}}</span></div>
+  </li>
 {% endfor %}
-  <ul>
+            </ol>
+        </div>
+    </div>
+    <div class="footer">
+        <p>
+        The links on <a href="/">this site</a> are pulled hourly from my
+        <a href="http://instapaper.com/">Instapaper</a> account.  Republishing it elsewhere really wouldn't make
+        any sense, as there's no real content here, but if you're <em>terribly</em> keen, the lists are
+        <a href="http://creativecommons.org/licenses/by-nc-sa/3.0/" rel="license">licensed for non-commercial reuse</a>.
+        Thanks for visiting!</p>
+        <address><a href="http://mikewest.org/" class="fn">Mike West</a> - <a href='mailto:mike@mikewest.org' class="email">mike@mikewest.org</a></address>
+    </div>
 </body>
 </html>

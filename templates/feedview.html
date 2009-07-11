@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Things I think you should read: "{{ folder }}"</title> 
+    <link href="http://thingsyoushouldread.mikewest.org/folder/{{ folder }}/" />
+    <link href="http://thingsyoushouldread.mikewest.org/folder/{{ folder }}/feed/" rel="self" />
+    <updated>{{ last_updated|date:"Y-m-d\TH:i:s\Z" }}</updated>
+    <author> 
+        <name>Mike West</name>
+    </author> 
+    <id>http://thingsyoushouldread.mikewest.org/folder/{{ folder }}/feed/</id>
+{% for link in links %}
+    <entry>
+        <title type="html">{{ link.title }} (&#9733;)</title>
+        <link href="{{ link.url }}"/>
+        <id>{{ link.url }}</id>
+        <updated>{{ link.published|date:"Y-m-d\TH:i:s\Z" }}</updated>
+        <summary></summary>
+    </entry>
+{% endfor %}
+</feed>

@@ -10,9 +10,16 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
-# Unused in query history -- copied from input.
+# Used 63 times in query history.
 - kind: Bookmark
   properties:
   - name: category
+  - name: published
+    direction: desc
+
+# Used once in query history.
+- kind: Bookmark
+  properties:
+  - name: starred
   - name: published
     direction: desc
