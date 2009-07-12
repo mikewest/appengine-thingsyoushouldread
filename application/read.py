@@ -13,6 +13,7 @@ sys.path.insert( 0, os.path.join( APP_BASE, 'lib', 'sources' ) )
 from google.appengine.ext import webapp, db
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.api import memcache
 from google.appengine.api.labs.taskqueue import Task
 import pickle
 import logging
@@ -22,6 +23,15 @@ from models.Bookmark import Bookmark
 from sources.feeds import InstapaperFeed
 
 class EasyRenderingRequestHandler( webapp.RequestHandler ):
+    def renderFromMemcache( self, memcache_key ):
+        data = memcache.get( memcache_key )
+        if data is None:
+            return False
+        else:
+            self.response.headers['Content-Type'] = data[0]
+            self.response.out.write( data[1] )
+            return True
+
     def renderText( self, template_filename, context ):
         self.render( 'text/plain/', template_filename, context )
 
@@ -42,14 +52,24 @@ class EasyRenderingRequestHandler( webapp.RequestHandler ):
         path = '%s/%s' % ( TEMPLATES_BASE, template_filename )
         if content_type:
             self.response.headers['Content-Type'] = content_type
+        html = template.render( path, context )
+        if context.has_key( 'memcache_key' ):
+            memcache.set( key=context['memcache_key'], value=(content_type, html), time=1800 ) 
         self.response.out.write( template.render( path,  context ) ) 
 
 class Index( EasyRenderingRequestHandler ):
     def get( self ):
-        self.renderHtml( 'index.html', {} )
+        if self.renderFromMemcache( 'index' ):
+            return True
+
+        self.renderHtml( 'index.html', { 'memcache_key': 'index' } )
 
 class ListView( EasyRenderingRequestHandler ):
     def get( self, folder ):
+        memcache_key = 'list_%s' % folder
+        if self.renderFromMemcache( memcache_key ):
+            return True
+
         if folder == 'Starred':
             links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE starred = True ORDER BY published DESC' )
         elif folder == 'Recent':
@@ -57,12 +77,19 @@ class ListView( EasyRenderingRequestHandler ):
         else:
             links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC', folder )
         if links.count():
-            self.renderHtml( 'listview.html', { 'links': links, 'folder': folder } )
+            self.renderHtml( 'listview.html', {
+                                                'links':        links,
+                                                'folder':       folder,
+                                                'memcache_key': memcache_key } )
         else:
             self.render404()
 
 class FeedView( EasyRenderingRequestHandler ):
     def get( self, folder ):
+        memcache_key = 'feed_%s' % folder
+        if self.renderFromMemcache( memcache_key ):
+            return True
+
         if folder == 'Starred':
             links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE starred = True ORDER BY published DESC LIMIT 25' )
         elif folder == 'Recent':
@@ -71,7 +98,10 @@ class FeedView( EasyRenderingRequestHandler ):
            links = db.GqlQuery( 'SELECT * FROM Bookmark WHERE category = :1 ORDER BY published DESC LIMIT 25', folder )
         if links.count():
             updated = links[ 0 ].published
-            self.renderFeed( 'feedview.html', { 'links': links, 'last_updated': updated, 'folder': folder } )
+            self.renderFeed( 'feedview.html', { 'links':        links,
+                                                'last_updated': updated,
+                                                'folder':       folder,
+                                                'memcache_key': memcache_key } )
         else:
             self.render404()
         
@@ -114,12 +144,20 @@ class ItemWorker( WorkerBase ):
 
     def _normalize_url( self, url ):
         from google.appengine.api import urlfetch
+        from google.appengine.api.urlfetch import DownloadError 
 
         original_url        = url        
         found_final_url     = False
         redirects_remaining = 5
+        logging.info( "Normalizing '%s'" % url )
         while not found_final_url and redirects_remaining > 0:
-            response = urlfetch.fetch( url, follow_redirects=False )
+            retry_count = 3
+            try:
+                response = urlfetch.fetch( url, follow_redirects=False )
+            except DownloadError:
+                logging.error( "DownloadError thrown while retrieving '%s': Aborting" % url )
+                return url
+
             if response.status_code in [ 301, 302, 303, 307 ]:
                 redirects_remaining -= 1
                 if response.headers['Location']:
