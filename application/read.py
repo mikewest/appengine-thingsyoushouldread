@@ -112,6 +112,24 @@ class ItemWorker( WorkerBase ):
         else:
             return False
 
+    def _normalize_url( self, url ):
+        from google.appengine.api import urlfetch
+
+        original_url        = url        
+        found_final_url     = False
+        redirects_remaining = 5
+        while not found_final_url and redirects_remaining > 0:
+            response = urlfetch.fetch( url, follow_redirects=False )
+            if response.status_code in [ 301, 302, 303, 307 ]:
+                redirects_remaining -= 1
+                if response.headers['Location']:
+                    url = response.headers['Location']
+                else:
+                    logging.error( 'Redirect from %s with status %s, but no Location header' % ( url, response.status_code ) )
+            else:
+                found_final_url = True
+        return url
+
     def _item_txn( self ):
         link = Bookmark.get_by_key_name( self.item['key_name'] )
         if link is None:
@@ -125,15 +143,22 @@ class ItemWorker( WorkerBase ):
                             normalized_url=False,
                             starred=self.item['starred']
                         )
-            link.put()
         else:
             if self.item['category'] == u'Starred':
                 if not link.starred:
-                    link.starred = True
-                    link.put()
+                    link.starred    = True
+                    link.published  = self.item['published']
             elif self.item['category'] != link.category:
-                link.category = self.item['category']
-                link.put()
+                link.category   = self.item['category']
+                link.published  = self.item['published']  
+
+        if not link.normalized_url:
+            normalized = self._normalize_url( link.url )
+            if normalized != link.url:
+                link.url = normalized
+            link.normalized_url = True
+        
+        link.put()
 #
 # Cron
 #
