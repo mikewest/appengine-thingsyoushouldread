@@ -141,7 +141,7 @@ class ItemWorker( WorkerBase ):
         if response.status_code == 200:
             logging.info( 'Response from delicious: {{ %s }}' % response.content )
             data = simplejson.loads( response.content )
-            if data[0] and data[0]['top_tags']:
+            if len( data ) > 0 and data[0].has_key('top_tags'):
                 return [ tag for tag in data[0]['top_tags'] ]
             else:
                 return []
