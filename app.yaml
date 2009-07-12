@@ -4,6 +4,9 @@ runtime: python
 api_version: 1
 
 handlers:
+-   url:    /favicon.ico
+    static_files:   templates/favicon.ico
+    upload:         templates/favicon.ico
 -   url:    /task/update/
     script: application/read.py
 -   url:    /.*
