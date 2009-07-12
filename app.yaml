@@ -1,5 +1,5 @@
 application: thingsyoushouldread
-version: 1-layout-rss
+version: release-1-0
 runtime: python
 api_version: 1
 
