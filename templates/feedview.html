@@ -14,7 +14,15 @@
         <link href="{{ link.url }}"/>
         <id>{{ link.url }}</id>
         <updated>{{ link.published|date:"Y-m-d\TH:i:s\Z" }}</updated>
-        <summary></summary>
+        <summary type="html">
+            {% if link.tags %}
+            <p>Tags, <a href='http://delicious/url/{{ link.url|hash }}'>crowdsourced from del.icio.us</a>:
+                {% for tag in link.tags %}
+                {{ tag|escape }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+        </summary>
     </entry>
 {% endfor %}
 </feed>

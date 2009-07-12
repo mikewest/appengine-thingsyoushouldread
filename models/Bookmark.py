@@ -10,3 +10,4 @@ class Bookmark( db.Model ):
     description     =  db.TextProperty()
     category        =  db.StringProperty()
     published       =  db.DateTimeProperty()
+    tags            =  db.StringListProperty()

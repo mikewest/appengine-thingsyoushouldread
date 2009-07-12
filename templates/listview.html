@@ -3,10 +3,10 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Things You Should Read: {{ folder }}</title>
-    <link rel="stylesheet" href="http://static.mikewest.org/common.css" type="text/css" media="screen">
+    <link rel="stylesheet" href="http://static.mikewest.org/20090712/common.css" type="text/css" media="screen">
     <style type="text/css">
         /* Override the mikewest.org stylesheets a tiny little bit */
-        .archive ol li a:first-child    {   margin-bottom:  1em;    position: relative;             }
+        .archive ol li > a:first-child  {   margin-bottom:  1em;    position: relative;             }
         .footer                         {   clear:          both;                                   }
         .meta                           {   width:          116px;                                  }
         .starred                        {   position:       absolute;   left:  -35px; top: 0px;     }
@@ -35,6 +35,13 @@
         {% endif %}
     </a>
     <div class="meta">I read this around <span class="published">{{ link.published|date:"H:i \o\n F j, Y"}}</span></div>
+    {% if link.tags %}
+    <p>Tags, <a href='http://delicious/url/{{ link.url|hash }}'>crowdsourced from del.icio.us</a>:
+        {% for tag in link.tags %}
+        {{ tag|escape }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
   </li>
 {% endfor %}
             </ol>

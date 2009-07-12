@@ -130,6 +130,25 @@ class ItemWorker( WorkerBase ):
                 found_final_url = True
         return url
 
+    def _crowdsource_tags( self, url ):
+        from google.appengine.api import urlfetch
+        from django.utils import simplejson
+       
+        logging.info( 'Crowdsourcing tags for %s' % url )
+
+        delicious = 'http://feeds.delicious.com/v2/json/urlinfo?url=%s' % url
+        response  = urlfetch.fetch( delicious )
+        if response.status_code == 200:
+            logging.info( 'Response from delicious: {{ %s }}' % response.content )
+            data = simplejson.loads( response.content )
+            if data[0] and data[0]['top_tags']:
+                return [ tag for tag in data[0]['top_tags'] ]
+            else:
+                return []
+        else:
+            return None
+
+
     def _item_txn( self ):
         link = Bookmark.get_by_key_name( self.item['key_name'] )
         if link is None:
@@ -157,7 +176,10 @@ class ItemWorker( WorkerBase ):
             if normalized != link.url:
                 link.url = normalized
             link.normalized_url = True
-        
+       
+        if ( link.tags == [] or link.tags is None ) and link.category != u'To Be Read':
+            link.tags = self._crowdsource_tags( link.url )
+
         link.put()
 #
 # Cron
@@ -231,6 +253,7 @@ def main():
         ( '/*',                     NotFound )
     ]
     application = webapp.WSGIApplication( ROUTES, debug=DEBUG )
+    webapp.template.register_template_library('lib.templatefilters')
     run_wsgi_app(application)
 
 if __name__ == "__main__":
